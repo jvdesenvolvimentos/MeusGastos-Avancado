@@ -2,11 +2,15 @@ package com.jvdesenvolvimentos.meusgastos
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,12 +23,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -50,6 +58,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -117,10 +127,20 @@ fun ExpenseListScreen(
             TopAppBar(
                 title = { Text("Meus Gastos") },
                 actions = {
+                    IconButton(onClick = {
+                        viewModel.syncBackup(totalExpense) { message ->
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.CloudUpload,
+                            contentDescription = "Enviar Backup (POST)"
+                        )
+                    }
                     IconButton(onClick = { navController.navigate(Screen.CurrencyApi.route) }) {
                         Icon(
                             imageVector = Icons.Default.CurrencyExchange,
-                            contentDescription = "Cotações de Moedas"
+                            contentDescription = "Cotações de Moedas (GET)"
                         )
                     }
                 },
@@ -171,18 +191,35 @@ fun ExpenseListScreen(
                 }
             }
 
-            // Recurso Nativo: Compartilhar Resumo de Gastos via Intent Nativa
-            OutlinedButton(
-                onClick = {
-                    shareExpensesSummary(context, totalExpense, expenses.size)
-                },
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.Share, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Compartilhar Resumo")
+                OutlinedButton(
+                    onClick = {
+                        shareExpensesSummary(context, totalExpense, expenses.size)
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Compartilhar")
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        viewModel.syncBackup(totalExpense) { message ->
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.CloudUpload, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Backup Nuvem")
+                }
             }
 
             if (expenses.isEmpty()) {
@@ -267,6 +304,13 @@ fun AddExpenseScreen(
     var amountText by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("") }
+    var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        capturedImage = bitmap
+    }
 
     val context = LocalContext.current
 
@@ -293,7 +337,8 @@ fun AddExpenseScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OutlinedTextField(
@@ -328,6 +373,32 @@ fun AddExpenseScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+
+            // Recurso Nativo: Câmera (Tirar Foto do Recibo)
+            OutlinedButton(
+                onClick = { cameraLauncher.launch(null) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.PhotoCamera, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Tirar Foto do Recibo")
+            }
+
+            capturedImage?.let { bitmap ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Foto do Recibo",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -370,7 +441,7 @@ fun CurrencyApiScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cotações de Moedas (Retrofit)") },
+                title = { Text("Cotações de Moedas (Retrofit GET)") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -494,7 +565,6 @@ fun CurrencyApiScreen(
     }
 }
 
-// Função de Recurso Nativo (Native Device Intent - Share Sheet)
 private fun shareExpensesSummary(context: Context, total: Double, count: Int) {
     val sendIntent: Intent = Intent().apply {
         action = Intent.ACTION_SEND

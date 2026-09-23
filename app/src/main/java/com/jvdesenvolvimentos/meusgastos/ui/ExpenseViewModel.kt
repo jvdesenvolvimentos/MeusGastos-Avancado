@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.jvdesenvolvimentos.meusgastos.data.Expense
 import com.jvdesenvolvimentos.meusgastos.data.ExpenseDatabase
+import com.jvdesenvolvimentos.meusgastos.network.BackupData
 import com.jvdesenvolvimentos.meusgastos.network.CurrencyApi
 import com.jvdesenvolvimentos.meusgastos.network.CurrencyResponse
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +49,17 @@ class ExpenseViewModel(application: Application) : AndroidViewModel(application)
                 _currencyUiState.value = CurrencyUiState.Error(
                     e.localizedMessage ?: "Erro ao carregar cotações."
                 )
+            }
+        }
+    }
+
+    fun syncBackup(total: Double, onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = CurrencyApi.retrofitService.sendBackup(BackupData(total = total))
+                onResult("Backup sincronizado com sucesso na nuvem! (ID: ${response.id})")
+            } catch (e: Exception) {
+                onResult("Erro ao enviar backup: ${e.localizedMessage}")
             }
         }
     }
