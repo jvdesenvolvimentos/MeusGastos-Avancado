@@ -4,6 +4,8 @@
 * **Nome:** João Vitor da Silva Soares
 * **Data de Entrega:** 23/09/2026
 
+
+**Requisitos Atendidos:** 3 telas em Jetpack Compose, Navigation Compose, Room Database (Entity + DAO), Consumo de API Rest com Retrofit (GET) e Recurso Nativo do Dispositivo (Intent de Partilha).
 ## Justificativa da Escolha do Tema
 O tema "Controle de Gastos Pessoais" foi escolhido por sua alta utilidade prática no cotidiano, permitindo gerenciar despesas de forma simples, direta e organizada. Além disso, estruturalmente ele atende perfeitamente a todos os requisitos técnicos exigidos pela atividade, contemplando listagem de itens e formulário de cadastro.
 
